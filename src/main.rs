@@ -35,18 +35,6 @@ fn loss(weights: &Vec<f64>, data: &Vec<Data>) -> f64 {
 
 fn train(weights: &mut Vec<f64>, data: &Vec<Data>, learning_rate: f64) {
     let mut gradients = vec![0.0; weights.len()];
-    /*
-    for i in 0..weights.len() {
-        let step = 0.0001;
-        let mut copy = weights.clone();
-        copy[i] = weights[i] - step;
-        let lower_loss = loss(&copy, data);
-        copy[i] = weights[i] + step;
-        let upper_loss = loss(&copy, data);
-
-        gradients[i] = (upper_loss - lower_loss)/(2.0 * step);
-    }
-    */
     for d in data {
         let prediction = predict(weights, d);
         let miss = prediction - d.output;
@@ -135,23 +123,49 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         )
     }
+    let weights_filename = "weights.bin";
     let mut weights = vec![0.0; 12];
+
+    match std::fs::read(weights_filename) {
+        Ok(bytes) => {
+            if bytes.len() == weights.len() * 8 {
+                for (i, chunk) in bytes.chunks_exact(8).enumerate() {
+                    let arr: [u8; 8] = chunk.try_into()?;
+                    weights[i] = f64::from_le_bytes(arr);
+                }
+                println!("loaded weights from {weights_filename}");
+            } else {
+                println!(
+                    "{weights_filename} has the wrong size ({} bytes), starting from zeros",
+                    bytes.len()
+                );
+            }
+        }
+        Err(_) => println!("no {weights_filename} found, starting from zeros"),
+    }
+
     let learning_rate = 0.00000001;
 
-    for i in 0..10000 {
+    let mut prev_loss = loss(&weights, &data);
+    for i in 0..100000 {
         train(&mut weights, &data, learning_rate);
 
         if i % 1000 == 0 {
-            /*
-            print!("weights = ");
-            for weight in &weights {
-                print!("{weight} ");
-            }
-            println!();
-            */
-            println!("iteration {i:6}, loss = {}", loss(&weights, &data));
+            let loss = loss(&weights, &data);
+            println!("iteration {i:6}, loss = {}, improvement = {}", loss, prev_loss - loss);
+            prev_loss = loss;
         }
     }
+    let mut bytes = Vec::with_capacity(weights.len() * 8);
+    for weight in &weights {
+        bytes.extend_from_slice(&weight.to_le_bytes());
+    }
+    std::fs::write(weights_filename, bytes)?;
+    print!("weights = ");
+    for weight in &weights {
+        print!("{weight} ");
+    }
+    println!();
     test(&weights);
     Ok(())
 }
