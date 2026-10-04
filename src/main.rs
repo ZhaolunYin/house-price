@@ -132,27 +132,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let weights_filename = "weights.bin";
     let mut weights = vec![0.0; 7];
-
-    match std::fs::read(weights_filename) {
-        Ok(bytes) => {
-            if bytes.len() == weights.len() * 8 {
-                for (i, chunk) in bytes.chunks_exact(8).enumerate() {
-                    let arr: [u8; 8] = chunk.try_into()?;
-                    weights[i] = f64::from_le_bytes(arr);
-                }
-                println!("loaded weights from {weights_filename}");
-            } else {
-                println!(
-                    "{weights_filename} has the wrong size ({} bytes), starting from zeros",
-                    bytes.len()
-                );
-            }
-        }
-        Err(_) => println!("no {weights_filename} found, starting from zeros"),
-    }
-
     let learning_rate = 0.1;
 
     let mut prev_loss = loss(&weights, &data);
@@ -165,11 +145,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             prev_loss = loss;
         }
     }
-    let mut bytes = Vec::with_capacity(weights.len() * 8);
-    for weight in &weights {
-        bytes.extend_from_slice(&weight.to_le_bytes());
-    }
-    std::fs::write(weights_filename, bytes)?;
     print!("weights = ");
     for weight in &weights {
         print!("{weight} ");
