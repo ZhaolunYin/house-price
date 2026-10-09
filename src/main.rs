@@ -2,9 +2,7 @@ use std::error::Error;
 use std::io::{self, Write};
 
 mod logic;
-use crate::logic::Datum;
-use crate::logic::DataNormalized;
-use crate::logic::Neuron;
+use crate::logic::{Datum, DataNormalized, Neuron, Layer, Network};
 
 fn test(neuron: &Neuron, data: &DataNormalized) {
     println!("Enter house information:");
@@ -38,7 +36,7 @@ fn test(neuron: &Neuron, data: &DataNormalized) {
         output: 0.0,
     };
 
-    let prediction = logic::neuron(&neuron, &data);
+    let prediction = logic::neuron_forward(&neuron, &data.inputs);
 
     println!();
     println!("Predicted price: ${:.2}", prediction);
@@ -108,6 +106,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         weights: vec![0.0; data.data[0].inputs.len()],
         bias: 0.0,
     };
+
+    let mut network = Network::new(&[data.data[0].inputs.len(), 1]);
 
     let learning_rate = 0.1;
 
